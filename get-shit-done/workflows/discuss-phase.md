@@ -242,6 +242,47 @@ Structure the extracted information:
 **If no prior context exists:** Continue without — this is expected for early phases.
 </step>
 
+<step name="cross_reference_todos">
+Check if any pending todos are relevant to this phase's scope. Surfaces backlog items that might otherwise be missed.
+
+**Load and match todos:**
+```bash
+TODO_MATCHES=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" todo match-phase "${PHASE_NUMBER}")
+```
+
+Parse JSON for: `todo_count`, `matches[]` (each with `file`, `title`, `area`, `score`, `reasons`).
+
+**If `todo_count` is 0 or `matches` is empty:** Skip silently — no workflow slowdown.
+
+**If matches found:**
+
+Present matched todos to the user. Show each match with its title, area, and why it matched:
+
+```
+📋 Found {N} pending todo(s) that may be relevant to Phase {X}:
+
+{For each match:}
+- **{title}** (area: {area}, relevance: {score}) — matched on {reasons}
+```
+
+Use AskUserQuestion (multiSelect) asking which todos to fold into this phase's scope:
+
+```
+Which of these todos should be folded into Phase {X} scope?
+(Select any that apply, or none to skip)
+```
+
+**For selected (folded) todos:**
+- Store internally as `<folded_todos>` for inclusion in CONTEXT.md `<decisions>` section
+- These become additional scope items that downstream agents (researcher, planner) will see
+
+**For unselected (reviewed but not folded) todos:**
+- Store internally as `<reviewed_todos>` for inclusion in CONTEXT.md `<deferred>` section
+- This prevents future phases from re-surfacing the same todos as "missed"
+
+**Auto mode (`--auto`):** Fold all todos with score >= 0.4 automatically. Log the selection.
+</step>
+
 <step name="scout_codebase">
 Lightweight scan of existing code to inform gray area identification and discussion. Uses ~10% context — acceptable for an interactive session.
 
@@ -544,6 +585,11 @@ mkdir -p ".planning/phases/${padded_phase}-${phase_slug}"
 ### Claude's Discretion
 [Areas where user said "you decide" — note that Claude has flexibility here]
 
+### Folded Todos
+[If any todos were folded into scope from the cross_reference_todos step, list them here.
+Each entry should include the todo title, original problem, and how it fits this phase's scope.
+If no todos were folded: omit this subsection entirely.]
+
 </decisions>
 
 <canonical_refs>
@@ -594,6 +640,12 @@ Every entry needs a full relative path — not just a name.]
 ## Deferred Ideas
 
 [Ideas that came up but belong in other phases. Don't lose them.]
+
+### Reviewed Todos (not folded)
+[If any todos were reviewed in cross_reference_todos but not folded into scope,
+list them here so future phases know they were considered.
+Each entry: todo title + reason it was deferred (out of scope, belongs in Phase Y, etc.)
+If no reviewed-but-deferred todos: omit this subsection entirely.]
 
 [If none: "None — discussion stayed within phase scope"]
 

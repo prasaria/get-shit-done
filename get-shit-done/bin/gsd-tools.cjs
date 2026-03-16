@@ -534,8 +534,10 @@ async function main() {
       const subcommand = args[1];
       if (subcommand === 'complete') {
         commands.cmdTodoComplete(cwd, args[2], raw);
+      } else if (subcommand === 'match-phase') {
+        commands.cmdTodoMatchPhase(cwd, args[2], raw);
       } else {
-        error('Unknown todo subcommand. Available: complete');
+        error('Unknown todo subcommand. Available: complete, match-phase');
       }
       break;
     }
